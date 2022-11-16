@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Classifier
 // @namespace    KrzysztofKruk-FlyWire
-// @version      0.1.1
+// @version      0.1.2
 // @description  Helps grouping cells of the same type
 // @author       Krzysztof Kruk
 // @match        https://ngl.flywire.ai/*
@@ -61,7 +61,7 @@ function main() {
         document.getElementById('kk-classifier-table').addEventListener('click', e => {
         
           if (e.target.classList.contains('kk-classifier-copy')) {
-            const ids = e.target.parentNode.previousSibling.textContent
+            const ids = e.target.parentNode.previousElementSibling.textContent.trim()
             navigator.clipboard.writeText(ids)
           }
           else if (e.target.classList.contains('kk-classifier-remove')) {
