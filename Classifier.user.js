@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Classifier
 // @namespace    KrzysztofKruk-FlyWire
-// @version      0.1.2
+// @version      0.1.3
 // @description  Helps grouping cells of the same type
 // @author       Krzysztof Kruk
 // @match        https://ngl.flywire.ai/*
@@ -53,13 +53,13 @@ function main() {
         `
       }
       html += '</table>'
+      html += '<button id="kk-classifier-copy-all">Copy All</button>'
 
       const afterCreateCallback = () => {
         const content = document.querySelector('#kk-classifier-show-entries > .content')
         content.style.height = '80vh'
         content.style.overflow = 'auto'
         document.getElementById('kk-classifier-table').addEventListener('click', e => {
-        
           if (e.target.classList.contains('kk-classifier-copy')) {
             const ids = e.target.parentNode.previousElementSibling.textContent.trim()
             navigator.clipboard.writeText(ids)
@@ -69,7 +69,14 @@ function main() {
             save(key, null, true)
             e.target.parentNode.parentNode.remove()
           }
+        })
 
+        document.getElementById('kk-classifier-copy-all').addEventListener('click', e => {
+          let str = ''
+          for (const [key, value] of Object.entries(saved)) {
+            str += key + '\r\n' + value + '\r\n\r\n'
+          }
+          navigator.clipboard.writeText(str)
         })
       }
 
