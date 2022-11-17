@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Classifier
 // @namespace    KrzysztofKruk-FlyWire
-// @version      0.1.3
+// @version      0.2
 // @description  Helps grouping cells of the same type
 // @author       Krzysztof Kruk
 // @match        https://ngl.flywire.ai/*
@@ -26,71 +26,88 @@ let wait = setInterval(() => {
 }, 100)
 
 
-function main() {
+let storage
+let classified
 
-  let storage = window.Sifrr.Storage.getStorage('indexeddb')
+const NO_OF_LABELS = 30
+const defaultLabels = [
+  'Centrifugal (C)',
+  'Distal medulla (Dm)',
+  'Lamina intrinsic (Lai)',
+  'Lamina monopolar (L)',
+  'Lamina wide field (Lawf)',
+  'Lobula columnar (Lc)',
+  'Lobula-complex columnar (Lccn)',
+  'Lobula intrinsic (Li)',
+  'Lobula plate intrinsic (Lpi)',
+  'Lobula tangential (Lt)',
+  'Medulla intrinsic (Mi)',
+  'Medulla tangential (Mt)',
+  'Optic lobe tangential (Olt)',
+  'Proximal medulla (Pm)',
+  'Retinula axon (R)',
+  'T',
+  'Translobula (Tl)',
+  'Translobula-plate (Tlp)',
+  'Transmedullary (Tm)',
+  'Transmedullary Y (TmY)',
+  'Y',
+  'unknown',
+  'other'
+]
+
+let currentLabels = defaultLabels
+
+
+function fix_editableLabels_2022_11_17() {
+  if (Dock.ls.get('fix_editableLabels_2022_11_17') === 'fixed') return
+
+  storage.get('kk-classifier').then(res => {
+    let saved = res['kk-classifier']
+
+    if (!saved) {
+      Dock.ls.set('fix_editableLabels_2022_11_17', 'fixed')
+      return
+    }
+
+    toBeSaved = {
+      labels: defaultLabels,
+      entries: []
+    }
+
+    for (const [key, value] of Object.entries(saved)) {
+      let index = toBeSaved.labels.indexOf(key)
+      toBeSaved.entries[index] = value
+    }
+
+    for (let i = 0; i < defaultLabels.length; i++) {
+      if (!toBeSaved.entries[i]) {
+        toBeSaved.entries[i] = []
+      }
+    }
+
+    storage.set('kk-classifier', { value: toBeSaved }).then(() => {
+      Dock.ls.set('fix_editableLabels_2022_11_17', 'fixed')
+    })
+  })
+}
+
+
+function main() {
+  storage = window.Sifrr.Storage.getStorage('indexeddb')
+
+  fix_editableLabels_2022_11_17()
+
+  getEntries()
+
   let id
 
   const topBar = document.getElementsByClassName('neuroglancer-viewer-top-row')[0]
   const button = document.createElement('button')
   button.id = 'kk-classifier-get-classified'
   button.textContent = 'Get classified cells'
-  button.addEventListener('click', () => {
-    storage.get('kk-classifier').then(res => {
-      let saved = res['kk-classifier']
+  button.addEventListener('click', getClassifiedCellsHandler)
 
-      if (!saved) return
-
-      let html = '<table id="kk-classifier-table">'
-      for (const [key, value] of Object.entries(saved)) {
-        html += `
-          <tr data-key="${key}">
-            <td>${key}</td>
-            <td>${value.join(', ')}</td>
-            <td><button class="kk-classifier-copy">Copy</button></td>
-            <td><button class="kk-classifier-remove">Remove</button></td>
-          </tr>
-        `
-      }
-      html += '</table>'
-      html += '<button id="kk-classifier-copy-all">Copy All</button>'
-
-      const afterCreateCallback = () => {
-        const content = document.querySelector('#kk-classifier-show-entries > .content')
-        content.style.height = '80vh'
-        content.style.overflow = 'auto'
-        document.getElementById('kk-classifier-table').addEventListener('click', e => {
-          if (e.target.classList.contains('kk-classifier-copy')) {
-            const ids = e.target.parentNode.previousElementSibling.textContent.trim()
-            navigator.clipboard.writeText(ids)
-          }
-          else if (e.target.classList.contains('kk-classifier-remove')) {
-            const key = e.target.parentNode.parentNode.dataset.key
-            save(key, null, true)
-            e.target.parentNode.parentNode.remove()
-          }
-        })
-
-        document.getElementById('kk-classifier-copy-all').addEventListener('click', e => {
-          let str = ''
-          for (const [key, value] of Object.entries(saved)) {
-            str += key + '\r\n' + value + '\r\n\r\n'
-          }
-          navigator.clipboard.writeText(str)
-        })
-      }
-
-      Dock.dialog({
-        id: 'kk-classifier-show-entries',
-        html: html,
-        okCallback: () => {},
-        afterCreateCallback: afterCreateCallback,
-        destroyAfterClosing: true,
-        width: 840
-      }).show()
-
-    })
-  })
   const undoButton = document.getElementById('neuroglancer-undo-button')
   topBar.insertBefore(button, undoButton)
 
@@ -99,40 +116,16 @@ function main() {
 
     id = e.target.parentNode.getElementsByClassName('segment-button')[0].dataset.segId
 
-    const types = ['Centrifugal (C)',
-    'Distal medulla (Dm)',
-    'Lamina intrinsic (Lai)',
-    'Lamina monopolar (L)',
-    'Lamina wide field (Lawf)',
-    'Lobula columnar (Lc)',
-    'Lobula-complex columnar (Lccn)',
-    'Lobula intrinsic (Li)',
-    'Lobula plate intrinsic (Lpi)',
-    'Lobula tangential (Lt)',
-    'Medulla intrinsic (Mi)',
-    'Medulla tangential (Mt)',
-    'Optic lobe tangential (Olt)',
-    'Proximal medulla (Pm)',
-    'Retinula axon (R)',
-    'T',
-    'Translobula (Tl)',
-    'Translobula-plate (Tlp)',
-    'Transmedullary (Tm)',
-    'Transmedullary Y (TmY)',
-    'Y',
-    'unknown',
-    'other'
-  ]
-
-  const list = '<select id="classifier-list" multiple size=25 style="overflow:hidden;">' + types.reduce((prev, current) => {
-    return prev + '<option>' + current +  '</option>'
-  }, '') + '</select>'
+    const list = '<select id="classifier-list" multiple size=25>' + classified.labels.reduce((prev, current) => {
+      return prev + '<option>' + current +  '</option>'
+    }, '') + '</select>'
 
     Dock.dialog({
       id: 'classifier-select',
       destroyAfterClosing: true,
       okCallback: okCallback,
       html: list,
+      width: 230,
       cancelCallback: () => {}
     }).show()
   })
@@ -141,26 +134,213 @@ function main() {
     const el = document.getElementById('classifier-list')
     const sel = el.options[el.selectedIndex].text
 
-    save(sel, id)
+    addEntry(sel, id)
   }
 
-  function save(sel, id, clear = false) {
-    storage.get('kk-classifier').then(res => {
-      let saved = res['kk-classifier']
-      if (!saved) {
-        saved = {}
-      }
+  addCss()
+}
 
-      if (clear) {
-        delete saved[sel]
+
+function saveEntries() {
+  storage.set('kk-classifier', { value: classified })
+}
+
+
+function getIndex(label) {
+  return classified.labels.indexOf(label)
+}
+
+
+function addEntry(label, id, clear = false) {
+  const index = getIndex(label)
+  if (index > -1) {
+    if (!classified.entries[index]) {
+      classified.entries[index] = []
+    }
+    classified.entries[index].push(id)
+    saveEntries()
+  }
+  else {
+    console.error('Incorrect label: ', label)
+  }
+}
+
+
+function clearEntry(label) {
+  const index = getIndex(label)
+  if (index > -1) {
+    classified.entries[index] = []
+    saveEntries()
+  }
+  else {
+    console.error('Incorrect label: ', label)
+  }
+}
+
+function getEntries() {
+  storage.get('kk-classifier').then(res => {
+    classified = res['kk-classifier']
+    if (!classified) {
+      classified = {
+        labels: defaultLabels,
+        entries: []
       }
-      else {
-       if (!saved[sel]) {
-          saved[sel] = []
-        }
-        saved[sel].push(id)
+    }
+  })
+}
+
+
+function getClassifiedCellsHandler() {
+  const labels = classified.labels
+  const entries = classified.entries
+
+  let html = '<button id="kk-classifier-copy-all">Copy All</button>'
+  html += '<button id="kk-classifier-edit-labels">Edit Labels</button>'
+  html += '<table id="kk-classifier-table">'
+  for (let i = 0; i < labels.length; i++) {
+    let label = labels[i]
+    let entry = entries[i]
+
+    html += `
+      <tr data-label="${label}">
+        <td>${label}</td>
+        <td class="kk-classifier-ids">${Array.isArray(entry) ? entry.join(', ') : ''}</td>
+        <td class="kk-classifier-buttons">
+          <button class="kk-classifier-copy">Copy</button>
+          <button class="kk-classifier-remove">Remove</button>
+        </td>
+      </tr>
+    `
+  }
+  for (let i = labels.length; i < NO_OF_LABELS; i++) {
+    html += `
+      <tr data-label="">
+        <td></td>
+        <td class="kk-classifier-ids"></td>
+        <td class="kk-classifier-buttons">
+          <button class="kk-classifier-copy">Copy</button>
+          <button class="kk-classifier-remove">Remove</button>
+        </td>
+      </tr>
+    `
+  }
+  html += '</table>'
+
+  const afterCreateCallback = () => {
+    document.getElementById('kk-classifier-table').addEventListener('click', e => {
+      if (e.target.classList.contains('kk-classifier-copy')) {
+        const ids = e.target.parentNode.previousElementSibling.textContent.trim()
+        navigator.clipboard.writeText(ids)
       }
-      storage.set('kk-classifier', { value: saved })
+      else if (e.target.classList.contains('kk-classifier-remove')) {
+        const label = e.target.parentNode.parentNode.dataset.label
+        clearEntry(label)
+        e.target.parentNode.previousElementSibling.textContent = ''
+      }
     })
+
+    document.getElementById('kk-classifier-copy-all').addEventListener('click', e => {
+      let str = ''
+      let label, entries
+      for (let i = 0; i < classified.labels.length; i++) {
+        label = classified.labels[i]
+        entries = classified.entries[i]
+        if (label && entries && entries.length) {
+          str += label + '\r\n' + entries.join(', ') + '\r\n\r\n'
+        }
+      }
+      navigator.clipboard.writeText(str)
+    })
+
+    document.getElementById('kk-classifier-edit-labels').addEventListener('click', editLabelsHandler)
   }
+
+  Dock.dialog({
+    id: 'kk-classifier-show-entries',
+    html: html,
+    okCallback: () => {},
+    afterCreateCallback: afterCreateCallback,
+    destroyAfterClosing: true,
+    width: 840
+  }).show()
+}
+
+
+function editLabelsHandler() {
+  const labels = classified.labels
+  let html = '';
+  for (let i = 0; i < labels.length; i++) {
+    html += `<input class="kk-classifier-label-name" value="${labels[i]}"><br />`
+  }
+  for (let i = labels.length; i < NO_OF_LABELS; i++) {
+    html += `<input class="kk-classifier-label-name""><br />`
+  }
+
+  Dock.dialog({
+    id: 'kk-classifier-edit-labels-dialog',
+    html: html,
+    width: 310,
+    destroyAfterClosing: true,
+    okCallback: okCallback,
+    cancelCallback: () => {}
+  }).show()
+
+  function okCallback() {
+    let labels = []
+    const tableRows = document.querySelectorAll('#kk-classifier-table tr')
+    document.getElementsByClassName('kk-classifier-label-name').forEach((el, index) => {
+      labels.push(el.value)
+      console.log(tableRows[index])
+      tableRows[index].firstElementChild.textContent = el.value
+    })
+    classified.labels = labels
+    saveEntries()
+  }
+}
+
+
+function addCss() {
+  Dock.addCss(/*css*/`
+    #classifier-list {
+      overflow: hidden;
+      background-color: #222;
+      color: white;
+      padding: 15px;
+    }
+
+    #kk-classifier-show-entries > div.content {
+      height: 80vh;
+      overflow: auto;
+    }
+
+    .content button#kk-classifier-edit-labels {
+      width: 100px;
+    }
+
+    .kk-classifier-ids {
+      font-size: 12px;
+    }
+
+    #kk-classifier-table {
+      padding: 10px;
+    }
+
+    #kk-classifier-table td {
+      padding: 5px;
+    }
+
+    #kk-classifier-table tr:nth-child(even) {
+      background-color: #333;
+    }
+
+    .kk-classifier-buttons {
+      min-width: 160px;
+    }
+
+    .kk-classifier-label-name {
+      width: 300px;
+      padding: 2px;
+      margin: 1px;
+    }
+  `)
 }
