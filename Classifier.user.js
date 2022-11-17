@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Classifier
 // @namespace    KrzysztofKruk-FlyWire
-// @version      0.2
+// @version      0.2.0.1
 // @description  Helps grouping cells of the same type
 // @author       Krzysztof Kruk
 // @match        https://ngl.flywire.ai/*
@@ -116,9 +116,11 @@ function main() {
 
     id = e.target.parentNode.getElementsByClassName('segment-button')[0].dataset.segId
 
-    const list = '<select id="classifier-list" multiple size=25>' + classified.labels.reduce((prev, current) => {
+    let list = `<select id="classifier-list" multiple size=${NO_OF_LABELS}>`
+    list += classified.labels.reduce((prev, current) => {
       return prev + '<option>' + current +  '</option>'
-    }, '') + '</select>'
+    }, '')
+    list += '</select>'
 
     Dock.dialog({
       id: 'classifier-select',
