@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Classifier
 // @namespace    KrzysztofKruk-FlyWire
-// @version      0.2.0.1
+// @version      0.2.1
 // @description  Helps grouping cells of the same type
 // @author       Krzysztof Kruk
 // @match        https://ngl.flywire.ai/*
@@ -199,26 +199,14 @@ function getClassifiedCellsHandler() {
   let html = '<button id="kk-classifier-copy-all">Copy All</button>'
   html += '<button id="kk-classifier-edit-labels">Edit Labels</button>'
   html += '<table id="kk-classifier-table">'
-  for (let i = 0; i < labels.length; i++) {
+  for (let i = 0; i < NO_OF_LABELS; i++) {
     let label = labels[i]
     let entry = entries[i]
 
     html += `
-      <tr data-label="${label}">
-        <td>${label}</td>
+      <tr data-label="${label || ''}">
+        <td class="kk-classifier-labels">${label || ''}</td>
         <td class="kk-classifier-ids">${Array.isArray(entry) ? entry.join(', ') : ''}</td>
-        <td class="kk-classifier-buttons">
-          <button class="kk-classifier-copy">Copy</button>
-          <button class="kk-classifier-remove">Remove</button>
-        </td>
-      </tr>
-    `
-  }
-  for (let i = labels.length; i < NO_OF_LABELS; i++) {
-    html += `
-      <tr data-label="">
-        <td></td>
-        <td class="kk-classifier-ids"></td>
         <td class="kk-classifier-buttons">
           <button class="kk-classifier-copy">Copy</button>
           <button class="kk-classifier-remove">Remove</button>
@@ -270,12 +258,9 @@ function getClassifiedCellsHandler() {
 
 function editLabelsHandler() {
   const labels = classified.labels
-  let html = '';
-  for (let i = 0; i < labels.length; i++) {
-    html += `<input class="kk-classifier-label-name" value="${labels[i]}"><br />`
-  }
-  for (let i = labels.length; i < NO_OF_LABELS; i++) {
-    html += `<input class="kk-classifier-label-name""><br />`
+  let html = '<button id="kk-classifier-restore-default-labels" title="Restore labels to types existing in the optic lobe">Restore default labels</button>';
+  for (let i = 0; i < NO_OF_LABELS; i++) {
+    html += `<input class="kk-classifier-label-name" value="${labels[i] || ''}"><br />`
   }
 
   Dock.dialog({
@@ -283,16 +268,26 @@ function editLabelsHandler() {
     html: html,
     width: 310,
     destroyAfterClosing: true,
+    afterCreateCallback: afterCreateCallback,
     okCallback: okCallback,
     cancelCallback: () => {}
   }).show()
+
+  function afterCreateCallback() {
+    document.getElementById('kk-classifier-restore-default-labels').addEventListener('click', () => {
+      const inputs = document.getElementsByClassName('kk-classifier-label-name')
+      const labels = document.getElementsByClassName('kk-classifier-labels')
+      for (let i = 0; i < NO_OF_LABELS; i++) {
+        inputs[i].value = defaultLabels[i] || ''
+      }
+    })
+  }
 
   function okCallback() {
     let labels = []
     const tableRows = document.querySelectorAll('#kk-classifier-table tr')
     document.getElementsByClassName('kk-classifier-label-name').forEach((el, index) => {
       labels.push(el.value)
-      console.log(tableRows[index])
       tableRows[index].firstElementChild.textContent = el.value
     })
     classified.labels = labels
@@ -343,6 +338,11 @@ function addCss() {
       width: 300px;
       padding: 2px;
       margin: 1px;
+    }
+
+    .content #kk-classifier-restore-default-labels {
+      width: 150px;
+      margin-bottom: 10px;
     }
   `)
 }
