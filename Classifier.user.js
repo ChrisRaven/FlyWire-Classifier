@@ -71,7 +71,7 @@ function fix_editableLabels_2022_11_17() {
       return
     }
 
-    toBeSaved = {
+    let toBeSaved = {
       labels: defaultLabels,
       entries: []
     }
