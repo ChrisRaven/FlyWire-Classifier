@@ -128,7 +128,7 @@ function main() {
       destroyAfterClosing: true,
       okCallback: okCallback,
       html: list,
-      width: 230,
+      width: 250,
       cancelCallback: () => {}
     }).show()
   })
