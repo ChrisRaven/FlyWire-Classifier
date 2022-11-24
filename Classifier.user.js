@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Classifier
 // @namespace    KrzysztofKruk-FlyWire
-// @version      0.2.1
+// @version      0.2.2
 // @description  Helps grouping cells of the same type
 // @author       Krzysztof Kruk
 // @match        https://ngl.flywire.ai/*
@@ -37,7 +37,8 @@ const defaultLabels = [
   'Lamina monopolar (L)',
   'Lamina wide field (Lawf)',
   'Lobula columnar (Lc)',
-  'Lobula-complex columnar (Lccn)',
+  ['Lobula-lobula plate columnar', 'LLPC'],
+  ['Lobula plate-lobula columnar', 'LPLC'],
   'Lobula intrinsic (Li)',
   'Lobula plate intrinsic (Lpi)',
   'Lobula tangential (Lt)',
