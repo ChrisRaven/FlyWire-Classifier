@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Classifier
 // @namespace    KrzysztofKruk-FlyWire
-// @version      0.2.2
+// @version      0.3
 // @description  Helps grouping cells of the same type
 // @author       Krzysztof Kruk
 // @match        https://ngl.flywire.ai/*
@@ -115,7 +115,7 @@ function main() {
   document.addEventListener('contextmenu', e => {
     if (!e.target.classList.contains('segment-color-selector')) return
 
-    id = e.target.parentNode.getElementsByClassName('segment-button')[0].dataset.segId
+    id = e.target.parentNode.parentNode.getElementsByClassName('segment-button')[0].dataset.segId
 
     let list = `<select id="classifier-list" multiple size=${NO_OF_LABELS}>`
     list += classified.labels.reduce((prev, current) => {
@@ -141,8 +141,24 @@ function main() {
   }
 
   addCss()
-}
 
+/*
+  document.addEventListener('keyup', e => {
+    let id = document.querySelector('.segment-div > .segment-checkbox:checked').parentElement.getElementsByClassName('segment-button')[0].dataset.segId
+    let label
+    switch (e.key) {
+      case 'q': label = 'T5a'; break
+      case 'w': label = 'T5b'; break
+      case 'e': label = 'T5c'; break
+      case 'r': label = 'T5d'; break
+      case 't': label = 'unknown'; break
+      case 'y': label = 'other'; break
+      // case 'u': label = 'projection'; break
+    }
+    addEntry(label, id)
+  })
+*/
+}
 
 function saveEntries() {
   storage.set('kk-classifier', { value: classified })
