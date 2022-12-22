@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Classifier
 // @namespace    KrzysztofKruk-FlyWire
-// @version      0.3
+// @version      0.4
 // @description  Helps grouping cells of the same type
 // @author       Krzysztof Kruk
 // @match        https://ngl.flywire.ai/*
@@ -142,22 +142,27 @@ function main() {
 
   addCss()
 
-/*
+
   document.addEventListener('keyup', e => {
     let id = document.querySelector('.segment-div > .segment-checkbox:checked').parentElement.getElementsByClassName('segment-button')[0].dataset.segId
-    let label
+    let index = -1
+
     switch (e.key) {
-      case 'q': label = 'T5a'; break
-      case 'w': label = 'T5b'; break
-      case 'e': label = 'T5c'; break
-      case 'r': label = 'T5d'; break
-      case 't': label = 'unknown'; break
-      case 'y': label = 'other'; break
-      // case 'u': label = 'projection'; break
+      case 'q': index = 0; break
+      case 'w': index = 1; break
+      case 'e': index = 2; break
+      case 'r': index = 3; break
+      case 't': index = 4; break
+      case 'y': index = 5; break
+      case 'x': document.querySelector('.selected-segment-button input[type="checkbox"]').click(); break
+      case 'd': document.querySelector('.segment-div > .segment-checkbox:checked').parentElement.getElementsByClassName('segment-button')[0].click(); break
     }
-    addEntry(label, id)
+
+    if (index > -1) {
+      addEntry(classified.labels[index], id)
+    }
   })
-*/
+
 }
 
 function saveEntries() {
@@ -179,21 +184,16 @@ function addEntry(label, id, clear = false) {
     classified.entries[index].push(id)
     saveEntries()
   }
-  else {
-    console.error('Incorrect label: ', label)
-  }
 }
 
 
 function clearEntry(label) {
-  const index = getIndex(label)
-  if (index > -1) {
-    classified.entries[index] = []
-    saveEntries()
-  }
-  else {
-    console.error('Incorrect label: ', label)
-  }
+  classified.labels.forEach((el, i) => {
+    if (el === label) {
+      classified.entries[i] = []
+    }
+  })
+  saveEntries()
 }
 
 function getEntries() {
