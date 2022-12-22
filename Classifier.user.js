@@ -144,6 +144,7 @@ function main() {
 
 
   document.addEventListener('keyup', e => {
+    if (document.querySelector('#chatMessage') == document.activeElement) return;
     let id = document.querySelector('.segment-div > .segment-checkbox:checked').parentElement.getElementsByClassName('segment-button')[0].dataset.segId
     let index = -1
 
