@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Classifier
 // @namespace    KrzysztofKruk-FlyWire
-// @version      0.4
+// @version      0.4.1
 // @description  Helps grouping cells of the same type
 // @author       Krzysztof Kruk
 // @match        https://ngl.flywire.ai/*
@@ -144,6 +144,7 @@ function main() {
 
 
   document.addEventListener('keyup', e => {
+    if (document.activeElement && ['input', 'textarea'].indexOf(document.activeElement.tagName.toLowerCase()) !== -1) return;
     let id = document.querySelector('.segment-div > .segment-checkbox:checked').parentElement.getElementsByClassName('segment-button')[0].dataset.segId
     let index = -1
 
