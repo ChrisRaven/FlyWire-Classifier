@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Classifier
 // @namespace    KrzysztofKruk-FlyWire
-// @version      0.4.1
+// @version      0.5
 // @description  Helps grouping cells of the same type
 // @author       Krzysztof Kruk
 // @match        https://ngl.flywire.ai/*
@@ -28,6 +28,7 @@ let wait = setInterval(() => {
 
 let storage
 let classified
+let lastClassified = -1
 
 const NO_OF_LABELS = 30
 const defaultLabels = [
@@ -58,6 +59,8 @@ const defaultLabels = [
 ]
 
 let currentLabels = defaultLabels
+let classifyHighlighted = false
+let useArrows = false
 
 
 function fix_editableLabels_2022_11_17() {
@@ -101,6 +104,32 @@ function main() {
 
   getEntries()
 
+  let dock = new Dock()
+
+  dock.addAddon({
+    name: 'Classifier',
+    id: 'kk-classifier',
+    html: generateHtml()
+  })
+
+  function generateHtml() {
+    return /*html*/`
+      <label>
+        <input type="checkbox" id="kk-classifier-element-selection">Classify highlighted element
+      </label><br />
+      <label>
+        <input type="checkbox" id="kk-classifier-use-arrows">Use arrows
+      </label>
+    `
+  }
+
+  classifyHighlighted = Dock.ls.get('classifier-element-selection-highlighted') === 'true'
+  document.getElementById('kk-classifier-element-selection').checked = classifyHighlighted
+
+  useArrows = Dock.ls.get('classifier-use-arrows') === 'true'
+  document.getElementById('kk-classifier-use-arrows').checked = useArrows
+
+
   let id
 
   const topBar = document.getElementsByClassName('neuroglancer-viewer-top-row')[0]
@@ -143,26 +172,151 @@ function main() {
   addCss()
 
 
+  function uncheckAll() {
+    document.querySelectorAll('.segment-div > .segment-checkbox').forEach(el => {
+      if (el.checked) {
+        el.click()
+      }
+    })
+  }
+
   document.addEventListener('keyup', e => {
-    if (document.activeElement && ['input', 'textarea'].indexOf(document.activeElement.tagName.toLowerCase()) !== -1) return;
-    let id = document.querySelector('.segment-div > .segment-checkbox:checked').parentElement.getElementsByClassName('segment-button')[0].dataset.segId
+    if (document.activeElement) {
+      const tagName = document.activeElement.tagName.toLowerCase()
+      if (tagName === 'input' || tagName === 'textarea') return
+    }
+
+    let id = -1
+    if (!classifyHighlighted) {
+      id = document.querySelector('.segment-div > .segment-checkbox:checked')
+      if (id) {
+        id = id.parentElement.getElementsByClassName('segment-button')[0].dataset.segId
+      }
+    }
+    else {
+      id = document.querySelector('.selected-segment-button > .segment-button')
+      if (id) {
+        id = id.dataset.segId
+      }
+    }
+
     let index = -1
 
+    let ev, panel
+    let current
+
     switch (e.key) {
-      case 'q': index = 0; break
+      case 'q':
+        if (e.ctrlKey) {
+          if (lastClassified > -1) {
+            classified.entries[lastClassified].pop()
+            saveEntries()
+            
+            lastClassified = -1
+          }
+        }
+        else {
+          index = 0
+        }
+
+        break
       case 'w': index = 1; break
-      case 'e': index = 2; break
-      case 'r': index = 3; break
+      case 'e':
+        index = 2
+
+        ev = new Event('action:rotate-relative-z-')
+        panel = document.querySelector('.neuroglancer-rendered-data-panel button[title="Switch to 3d layout."]')
+
+        if (!panel) {
+          panel = document.querySelector('.neuroglancer-rendered-data-panel button[title="Switch to 4panel layout."]')
+        }
+        if (panel) {
+          panel.parentElement.parentElement.dispatchEvent(ev)
+        }
+
+        break
+      case 'r':
+        index = 3
+
+        ev = new Event('action:rotate-relative-z+')
+        panel = document.querySelector('.neuroglancer-rendered-data-panel button[title="Switch to 3d layout."]')
+        if (!panel) {
+          panel = document.querySelector('.neuroglancer-rendered-data-panel button[title="Switch to 4panel layout."]')
+        }
+        if (panel) {
+          panel.parentElement.parentElement.dispatchEvent(ev)
+        }
+        
+        break
       case 't': index = 4; break
       case 'y': index = 5; break
       case 'x': document.querySelector('.selected-segment-button input[type="checkbox"]').click(); break
       case 'd': document.querySelector('.segment-div > .segment-checkbox:checked').parentElement.getElementsByClassName('segment-button')[0].click(); break
+
+      case 'ArrowRight':
+        if (!useArrows) return
+
+        current = document.querySelector('.segment-div > .segment-checkbox:checked')
+        uncheckAll()
+        if (!current) {
+          current = document.querySelector('.segment-div > .segment-checkbox')
+          current.click() // check the first segment
+          current.scrollIntoView()
+        }
+        else {
+          let next = current.parentElement.nextSibling
+
+          if (next) {
+            next.getElementsByClassName('segment-checkbox')[0].click()
+            next.scrollIntoView()
+          }
+          else {
+            current.click()
+          }
+        }
+
+        break
+
+      case 'ArrowLeft':
+        if (!useArrows) return
+
+        current = document.querySelector('.segment-div > .segment-checkbox:checked')
+        uncheckAll()
+        if (!current) {
+          current = document.querySelector('.segment-div > .segment-checkbox')
+          current.click() // check the first segment
+          current.scrollIntoView()
+        }
+        else {
+          let previous = current.parentElement.previousSibling
+
+          if (previous && previous.id !== 'kk-utilities-action-menu') {
+            previous.getElementsByClassName('segment-checkbox')[0].click()
+            previous.scrollIntoView()
+          }
+          else {
+            current.click()
+          }
+        }
+
+        break
     }
 
     if (index > -1) {
+      lastClassified = index
       addEntry(classified.labels[index], id)
     }
   })
+
+  document.getElementById('kk-classifier-element-selection').addEventListener('change', (e) => {
+      Dock.ls.set('classifier-element-selection-highlighted', e.target.checked)
+      classifyHighlighted = e.target.checked
+  })
+
+  document.getElementById('kk-classifier-use-arrows').addEventListener('change', (e) => {
+    Dock.ls.set('classifier-use-arrows', e.target.checked)
+    useArrows = e.target.checked
+})
 
 }
 
