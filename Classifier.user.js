@@ -204,6 +204,7 @@ function main() {
 
     let ev, panel
     let current
+    let element
 
     switch (e.key) {
       case 'q':
@@ -250,9 +251,19 @@ function main() {
         break
       case 't': index = 4; break
       case 'y': index = 5; break
-      case 'x': document.querySelector('.selected-segment-button input[type="checkbox"]').click(); break
+      case 'x':
+        if (classifyHighlighted) {
+          element = document.querySelector('.selected-segment-button input[type="checkbox"]')
+        }
+        else {
+          element = document.querySelector('.segment-div > input[type="checkbox"]')
+        }
+        if (element) {
+          element.click()
+        }
+        break
+
       case 'd':
-        let element
         if (classifyHighlighted) {
           element = document.querySelector('.selected-segment-button > .segment-button')
         }
