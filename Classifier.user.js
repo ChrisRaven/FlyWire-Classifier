@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Classifier
 // @namespace    KrzysztofKruk-FlyWire
-// @version      0.5
+// @version      0.5.1
 // @description  Helps grouping cells of the same type
 // @author       Krzysztof Kruk
 // @match        https://ngl.flywire.ai/*
@@ -251,7 +251,18 @@ function main() {
       case 't': index = 4; break
       case 'y': index = 5; break
       case 'x': document.querySelector('.selected-segment-button input[type="checkbox"]').click(); break
-      case 'd': document.querySelector('.segment-div > .segment-checkbox:checked').parentElement.getElementsByClassName('segment-button')[0].click(); break
+      case 'd':
+        let element
+        if (classifyHighlighted) {
+          element = document.querySelector('.selected-segment-button > .segment-button')
+        }
+        else {
+          element = document.querySelector('.segment-div > .segment-checkbox:checked').parentElement.getElementsByClassName('segment-button')[0]
+        }
+        if (element) {
+          element.click()
+        }
+        break
 
       case 'ArrowRight':
         if (!useArrows) return
