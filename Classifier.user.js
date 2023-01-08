@@ -7,7 +7,7 @@
 // @match        https://ngl.flywire.ai/*
 // @grant        none
 // @updateURL    https://raw.githubusercontent.com/ChrisRaven/FlyWire-Classifier/main/Classifier.user.js
-// @downloadURL  https://raw.githubusercontent.com/ChrisRaven/FlyWire-CLassifier/main/Classifier.user.js
+// @downloadURL  https://raw.githubusercontent.com/ChrisRaven/FlyWire-Classifier/main/Classifier.user.js
 // @homepageURL  https://github.com/ChrisRaven/FlyWire-Classifier
 // ==/UserScript==
 
