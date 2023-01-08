@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Classifier
 // @namespace    KrzysztofKruk-FlyWire
-// @version      0.5.1
+// @version      0.5.2
 // @description  Helps grouping cells of the same type
 // @author       Krzysztof Kruk
 // @match        https://ngl.flywire.ai/*
@@ -61,6 +61,8 @@ const defaultLabels = [
 let currentLabels = defaultLabels
 let classifyHighlighted = false
 let useArrows = false
+let deleteAfterClassification = false
+let jumpToNextAfterDeletion = false
 
 
 function fix_editableLabels_2022_11_17() {
@@ -115,10 +117,16 @@ function main() {
   function generateHtml() {
     return /*html*/`
       <label>
-        <input type="checkbox" id="kk-classifier-element-selection">Classify highlighted element
+        <input type="checkbox" id="kk-classifier-element-selection">Classify highlighted segment
       </label><br />
       <label>
         <input type="checkbox" id="kk-classifier-use-arrows">Use arrows
+      </label><br />
+      <label>
+        <input type="checkbox" id="kk-classifier-delete-after-classification">Delete after classification
+      </label><br />
+      <label>
+        <input type="checkbox" id="kk-classifier-jump-to-next">Jump to next after deletion
       </label>
     `
   }
@@ -128,6 +136,12 @@ function main() {
 
   useArrows = Dock.ls.get('classifier-use-arrows') === 'true'
   document.getElementById('kk-classifier-use-arrows').checked = useArrows
+
+  deleteAfterClassification = Dock.ls.get('classifier-delete-after-classification') === 'true'
+  document.getElementById('kk-classifier-delete-after-classification').checked = deleteAfterClassification
+
+  jumpToNextAfterDeletion = Dock.ls.get('classifier-jump-to-next') === 'true'
+  document.getElementById('kk-classifier-jump-to-next').checked = jumpToNextAfterDeletion
 
 
   let id
@@ -205,6 +219,7 @@ function main() {
     let ev, panel
     let current
     let element
+
 
     switch (e.key) {
       case 'q':
@@ -328,6 +343,15 @@ function main() {
       lastClassified = index
       addEntry(classified.labels[index], id)
     }
+
+    if (!e.ctrlKey && ['q', 'w', 'e', 'r', 't', 'y'].includes(e.key)) {
+      if (deleteAfterClassification) {
+        document.dispatchEvent(new KeyboardEvent('keyup', { key: 'd' }))
+      }
+      if (jumpToNextAfterDeletion) {
+        document.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowRight' }))
+      }
+    }
   })
 
   document.getElementById('kk-classifier-element-selection').addEventListener('change', (e) => {
@@ -338,7 +362,17 @@ function main() {
   document.getElementById('kk-classifier-use-arrows').addEventListener('change', (e) => {
     Dock.ls.set('classifier-use-arrows', e.target.checked)
     useArrows = e.target.checked
-})
+  })
+
+  document.getElementById('kk-classifier-delete-after-classification').addEventListener('change', (e) => {
+    Dock.ls.set('classifier-delete-after-classification', e.target.checked)
+    deleteAfterClassification = e.target.checked
+  })
+
+  document.getElementById('kk-classifier-jump-to-next').addEventListener('change', (e) => {
+    Dock.ls.set('classifier-jump-to-next', e.target.checked)
+    jumpToNextAfterDeletion = e.target.checked
+  })
 
 }
 
