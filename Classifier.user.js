@@ -344,8 +344,8 @@ function main() {
       addEntry(classified.labels[index], id)
     }
 
-    if (!e.ctrlKey && ['q', 'w', 'e', 'r', 't', 'y'].includes(e.key)) {
-      if (deleteAfterClassification) {
+    if (!e.ctrlKey && ['q', 'w', 'e', 'r', 't', 'y', 'd'].includes(e.key)) {
+      if (deleteAfterClassification && e.key !== 'd') { // we don't want to delete all segments one after another
         document.dispatchEvent(new KeyboardEvent('keyup', { key: 'd' }))
       }
       if (jumpToNextAfterDeletion) {
