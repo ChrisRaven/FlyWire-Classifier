@@ -1,10 +1,11 @@
 // ==UserScript==
 // @name         Classifier
 // @namespace    KrzysztofKruk-FlyWire
-// @version      0.5.2
+// @version      0.5.2.2
 // @description  Helps grouping cells of the same type
 // @author       Krzysztof Kruk
 // @match        https://ngl.flywire.ai/*
+// @match        https://proofreading.flywire.ai/*
 // @grant        none
 // @updateURL    https://raw.githubusercontent.com/ChrisRaven/FlyWire-Classifier/main/Classifier.user.js
 // @downloadURL  https://raw.githubusercontent.com/ChrisRaven/FlyWire-Classifier/main/Classifier.user.js
@@ -217,7 +218,7 @@ function main() {
     let index = -1
 
     let ev, panel
-    let current
+    let current, next
     let element
 
 
@@ -236,7 +237,9 @@ function main() {
         }
 
         break
+
       case 'w': index = 1; break
+      
       case 'e':
         index = 2
 
@@ -251,6 +254,7 @@ function main() {
         }
 
         break
+
       case 'r':
         index = 3
 
@@ -264,8 +268,11 @@ function main() {
         }
         
         break
+
       case 't': index = 4; break
+
       case 'y': index = 5; break
+
       case 'x':
         if (classifyHighlighted) {
           element = document.querySelector('.selected-segment-button input[type="checkbox"]')
@@ -286,22 +293,29 @@ function main() {
           element = document.querySelector('.segment-div > .segment-checkbox:checked').parentElement.getElementsByClassName('segment-button')[0]
         }
         if (element) {
+          next = element.parentElement.nextSibling
           element.click()
         }
+
+      if (!jumpToNextAfterDeletion) {
         break
+      }
 
       case 'ArrowRight':
         if (!useArrows) return
 
         current = document.querySelector('.segment-div > .segment-checkbox:checked')
         uncheckAll()
-        if (!current) {
+        if (jumpToNextAfterDeletion && next) {
+          next.querySelector('.segment-checkbox').click()
+        }
+        else if (!current) {
           current = document.querySelector('.segment-div > .segment-checkbox')
           current.click() // check the first segment
           current.scrollIntoView()
         }
         else {
-          let next = current.parentElement.nextSibling
+          next = current.parentElement.nextSibling
 
           if (next) {
             next.getElementsByClassName('segment-checkbox')[0].click()
@@ -339,17 +353,15 @@ function main() {
         break
     }
 
+
     if (index > -1) {
       lastClassified = index
       addEntry(classified.labels[index], id)
     }
 
     if (!e.ctrlKey && ['q', 'w', 'e', 'r', 't', 'y', 'd'].includes(e.key)) {
-      if (deleteAfterClassification && e.key !== 'd') { // we don't want to delete all segments one after another
+      if (deleteAfterClassification && e.key !== 'd') { // we don't want to delete all the segments one after another
         document.dispatchEvent(new KeyboardEvent('keyup', { key: 'd' }))
-      }
-      if (jumpToNextAfterDeletion) {
-        document.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowRight' }))
       }
     }
   })
@@ -375,6 +387,7 @@ function main() {
   })
 
 }
+
 
 function saveEntries() {
   storage.set('kk-classifier', { value: classified })
