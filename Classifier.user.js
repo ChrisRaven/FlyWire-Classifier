@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Classifier
 // @namespace    KrzysztofKruk-FlyWire
-// @version      0.5.2.2
+// @version      0.5.3
 // @description  Helps grouping cells of the same type
 // @author       Krzysztof Kruk
 // @match        https://ngl.flywire.ai/*
@@ -464,9 +464,20 @@ function getClassifiedCellsHandler() {
         navigator.clipboard.writeText(ids)
       }
       else if (e.target.classList.contains('kk-classifier-remove')) {
-        const label = e.target.parentNode.parentNode.dataset.label
-        clearEntry(label)
-        e.target.parentNode.previousElementSibling.textContent = ''
+        Dock.dialog({
+          id: 'kk-classifier-remove-confirmation',
+          html: 'Do you want to remove all these entries?',
+          okCallback: () => {
+            const label = e.target.parentNode.parentNode.dataset.label
+            clearEntry(label)
+            e.target.parentNode.previousElementSibling.textContent = ''
+          },
+          okLabel: 'Confirm',
+          cancelCallback: () => {},
+          cancelLabel: 'Cancel',
+          destroyAfterClosing: true
+        }).show()
+        
       }
     })
 
