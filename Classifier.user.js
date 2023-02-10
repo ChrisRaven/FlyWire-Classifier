@@ -1,11 +1,11 @@
 // ==UserScript==
 // @name         Classifier
 // @namespace    KrzysztofKruk-FlyWire
-// @version      0.5.3
+// @version      0.5.3.1
 // @description  Helps grouping cells of the same type
 // @author       Krzysztof Kruk
 // @match        https://ngl.flywire.ai/*
-// @match        https://proofreading.flywire.ai/*
+// @match        https://edit.flywire.ai/*
 // @grant        none
 // @updateURL    https://raw.githubusercontent.com/ChrisRaven/FlyWire-Classifier/main/Classifier.user.js
 // @downloadURL  https://raw.githubusercontent.com/ChrisRaven/FlyWire-Classifier/main/Classifier.user.js
