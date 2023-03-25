@@ -19,7 +19,7 @@ if (!document.getElementById('dock-script')) {
   document.head.appendChild(script)
 }
 
-const QUICK_COLLECT = DEV
+const QUICK_COLLECT = false
 
 let wait = setInterval(() => {
   if (globalThis.dockIsReady) {
