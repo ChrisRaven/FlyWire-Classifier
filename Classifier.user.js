@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Classifier
 // @namespace    KrzysztofKruk-FlyWire
-// @version      0.5.3.1
+// @version      0.5.4
 // @description  Helps grouping cells of the same type
 // @author       Krzysztof Kruk
 // @match        https://ngl.flywire.ai/*
@@ -18,6 +18,8 @@ if (!document.getElementById('dock-script')) {
   script.src = typeof DEV !== 'undefined' ? 'http://127.0.0.1:5501/FlyWire-Dock/Dock.js' : 'https://chrisraven.github.io/FlyWire-Dock/Dock.js'
   document.head.appendChild(script)
 }
+
+const QUICK_COLLECT = DEV
 
 let wait = setInterval(() => {
   if (globalThis.dockIsReady) {
@@ -150,7 +152,7 @@ function main() {
   const topBar = document.getElementsByClassName('neuroglancer-viewer-top-row')[0]
   const button = document.createElement('button')
   button.id = 'kk-classifier-get-classified'
-  button.textContent = 'Get classified cells'
+  button.innerHTML = 'Get<br />classified'
   button.addEventListener('click', getClassifiedCellsHandler)
 
   const undoButton = document.getElementById('neuroglancer-undo-button')
@@ -221,8 +223,7 @@ function main() {
     let current, next
     let element
 
-
-    switch (e.key) {
+    switch (e.key.toLowerCase()) {
       case 'q':
         if (e.ctrlKey) {
           if (lastClassified > -1) {
@@ -301,7 +302,10 @@ function main() {
         break
       }
 
-      case 'ArrowRight':
+          
+      case 'capslock':
+        if (!QUICK_COLLECT) return
+      case 'arrowright':
         if (!useArrows) return
 
         current = document.querySelector('.segment-div > .segment-checkbox:checked')
@@ -328,7 +332,7 @@ function main() {
 
         break
 
-      case 'ArrowLeft':
+      case 'arrowleft':
         if (!useArrows) return
 
         current = document.querySelector('.segment-div > .segment-checkbox:checked')
@@ -359,7 +363,7 @@ function main() {
       addEntry(classified.labels[index], id)
     }
 
-    if (!e.ctrlKey && ['q', 'w', 'e', 'r', 't', 'y', 'd'].includes(e.key)) {
+    if (!e.ctrlKey && ['q', 'w', 'e', 'r', 't', 'y', 'd'].includes(e.key.toLowerCase())) {
       if (deleteAfterClassification && e.key !== 'd') { // we don't want to delete all the segments one after another
         document.dispatchEvent(new KeyboardEvent('keyup', { key: 'd' }))
       }
@@ -385,6 +389,73 @@ function main() {
     Dock.ls.set('classifier-jump-to-next', e.target.checked)
     jumpToNextAfterDeletion = e.target.checked
   })
+
+  if (QUICK_COLLECT) {
+    const LS_NAME = 'currentClassificationId'
+    let clId = parseInt(localStorage.getItem(LS_NAME), 10)
+
+    if (clId === null) {
+      clId = 0
+      localStorage.setItem(LS_NAME, clId)
+    }
+
+    Dock.setId = id => {
+      clId = id
+      localStorage.setItem(LS_NAME, id)
+    }
+
+    Dock.getId = () => console.log(clId)
+
+    const button = document.createElement('button')
+    button.id = 'current-classification-id'
+    button.textContent = clId
+    button.style.border = '1px solid white'
+    button.style.padding = '0 10px'
+    button.style.margin = '0 5px'
+    
+    const undoButton = document.getElementById('neuroglancer-undo-button')
+    undoButton.insertAdjacentElement('beforebegin', button)
+
+    const MAX_INDEX = 4
+    button.addEventListener('click', () => {
+      clId = clId < MAX_INDEX ? clId + 1 : 0
+      Dock.setId(clId)
+      button.textContent = clId
+    })
+
+    button.addEventListener('contextmenu', e => {
+      e.preventDefault()
+      e.stopImmediatePropagation()
+      clId = clId > 0 ? clId - 1 : MAX_INDEX
+      Dock.setId(clId)
+      button.textContent = clId
+    })
+
+    document.body.addEventListener('click', (e) => {
+      if (e.ctrlKey && e.altKey) {
+        const id = viewer.mouseState.pickedValue.toJSON()
+        if (id) {
+          const element = document.querySelector(`button[data-seg-id="${id}"]`)
+          if (element) {
+            addEntry(classified.labels[clId], id)
+            element.click()
+          }
+        }
+      }
+
+      if (QUICK_COLLECT) {
+        if (e.ctrlKey && e.shiftKey) {
+          const id = viewer.mouseState.pickedValue.toJSON()
+          if (id) {
+            const element = document.querySelector(`button[data-seg-id="${id}"]`)
+            if (element) {
+              element.click()
+            }
+          }
+        }
+      }
+    })
+  }
 
 }
 
@@ -595,6 +666,10 @@ function addCss() {
     .content #kk-classifier-restore-default-labels {
       width: 150px;
       margin-bottom: 10px;
+    }
+
+    #kk-classifier-get-classified {
+      font-size: 14px;
     }
   `)
 }
